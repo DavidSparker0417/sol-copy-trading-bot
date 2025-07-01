@@ -1,0 +1,29 @@
+{
+  "wallets": [
+    "SussybqBBZdrYUvUpNxxT26FFxmX6aksvH57siWTyri"
+],
+  "trade": {
+    "tradeAmount": 0.02,
+    "tp": 21,
+    "sl": 20,
+    "slippage": 100,
+    "buyTip": 0.001,
+    "sellTip": 0.0002,
+    "prioFee": 0.1,
+    "timeout": 60,
+    "simulation": true,
+    "sell": {
+      "mode": "tp",
+      "takeProfits": [
+        {
+          "percentage": 5,
+          "sellPercent": 50
+        },
+        {
+          "percentage": 10,
+          "sellPercent": 50
+        }
+      ]
+    }
+  }
+}
