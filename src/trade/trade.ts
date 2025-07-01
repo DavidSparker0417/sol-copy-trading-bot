@@ -35,7 +35,11 @@ export function determineToSell(token: string, passedTm: number, tp: number, tra
 }
 
 export async function trade(trInfo: any) {
-  // console.log(trInfo)
+
+  if (trInfo.price < config.amountRange[0] || trInfo.price > config.amountRange[1]) {
+    console.log(`[${trInfo.what}] Price out of range: ${trInfo.price}`)
+    return
+  }
   switch (trInfo.where) {
     case 'PumpFun':
       tradePumpfun(gSigner, trInfo.who, {

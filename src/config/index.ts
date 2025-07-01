@@ -23,6 +23,7 @@ export interface TradeSetting {
 
 interface Config {
   wallets: string[],
+  amountRange: [number, number],
   trade: TradeSetting,
 }
 
