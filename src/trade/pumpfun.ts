@@ -20,7 +20,7 @@ export async function tradePumpfun(
     tradeSetting.slippage,
     tradeSetting.prioFee,
     {
-      type: "jito",
+      type: "0slot",
       amount: tradeSetting.buyTip
     },
     tokenInfo.price,
