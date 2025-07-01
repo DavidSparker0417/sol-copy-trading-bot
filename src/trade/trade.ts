@@ -1,4 +1,4 @@
-import { Keypair } from "@solana/web3.js";
+import { Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { TradeSetting, config } from "../config";
 import { tradePumpfun } from "./pumpfun";
 import { sleep, solWalletGetTokenAccounts, solWalletImport } from "dv-sol-lib";
@@ -36,8 +36,9 @@ export function determineToSell(token: string, passedTm: number, tp: number, tra
 
 export async function trade(trInfo: any) {
 
-  if (trInfo.price < config.amountRange[0] || trInfo.price > config.amountRange[1]) {
-    console.log(`[${trInfo.what}] Price out of range: ${trInfo.price}`)
+  const solAmount = trInfo.solAmount / LAMPORTS_PER_SOL
+  if (solAmount < config.amountRange[0] || solAmount > config.amountRange[1]) {
+    console.log(`[${trInfo.what}] Price out of range: ${solAmount}`)
     return
   }
   switch (trInfo.where) {

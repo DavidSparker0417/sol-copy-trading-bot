@@ -2,7 +2,7 @@
   "wallets": [
     "SussybqBBZdrYUvUpNxxT26FFxmX6aksvH57siWTyri"
   ],
-  "amountRange": [0, 100],
+  "amountRange": [10, 100],
   "trade": {
     "tradeAmount": 0.02,
     "tp": 21,
