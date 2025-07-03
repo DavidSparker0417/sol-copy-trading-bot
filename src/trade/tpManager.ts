@@ -85,10 +85,10 @@ export class TakeProfitManager {
         if (config.trade.sell.mode !== 'tp')
           return 0;
         
-        if (profitPercentage > config.trade.tp) {
-            console.log(`🎯 [${mintAddress}] TP reached! (${profitPercentage}%)`)
-            return 100
-        }
+        // if (profitPercentage > config.trade.tp) {
+        //     console.log(`🎯 [${mintAddress}] TP reached! (${profitPercentage}%)`)
+        //     return 100
+        // }
 
         for (const level of tokenData.takeProfitLevels) {
             if (level.executed)

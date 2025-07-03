@@ -2,26 +2,26 @@
   "wallets": [
     "suqh5sHtr8HyJ7q8scBimULPkPpA557prMG47xCHQfK"
   ],
-  "amountRange": [0, 100],
+  "amountRange": [2, 10],
   "trade": {
     "tradeAmount": 0.02,
     "tp": 21,
-    "sl": 20,
+    "sl": 15,
     "slippage": 100,
-    "buyTip": 0.001,
-    "sellTip": 0.0002,
-    "prioFee": 0.1,
-    "timeout": 60,
-    "simulation": true,
+    "buyTip": 0.01,
+    "sellTip": 0.0001,
+    "prioFee": 2,
+    "timeout": 200,
+    "simulation": false,
     "sell": {
       "mode": "tp",
       "takeProfits": [
         {
-          "percentage": 5,
+          "percentage": 30,
           "sellPercent": 50
         },
         {
-          "percentage": 10,
+          "percentage": 40,
           "sellPercent": 50
         }
       ]

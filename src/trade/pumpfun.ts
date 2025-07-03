@@ -85,7 +85,10 @@ export async function tradePumpfun(
           sellAmount,
           tradeSetting.slippage,
           0,
-          tradeSetting.sellTip
+          tradeSetting.sellTip ? {
+            type: "0slot",
+            amount: tradeSetting.sellTip
+          } : 0
         )
         if (sellTx) {
           await sleep(1000)

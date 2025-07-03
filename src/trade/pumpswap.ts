@@ -54,7 +54,7 @@ export async function tradePumpSwap(
     tokenPrice = data.price
   })
 
-  console.log(`[${token}] Buy tx : ${tx}, boughtPrice: ${boughtPrice}`)
+  console.log(`[${token}] Buy tx : ${tx}, boughtPrice: ${boughtPrice}, boughtToken: ${tokenBalance}`)
 
   const buyTime = getCurrentTimestamp()
   let oldPrice = boughtPrice
@@ -81,10 +81,13 @@ export async function tradePumpSwap(
         token,
         sellAmount,
         tradeSetting.slippage,
-        tradeSetting.sellTip
+        tradeSetting.sellTip ? {
+          type: "0slot",
+          amount: tradeSetting.sellTip
+        } : 0
       )
+      await sleep(1000)
       if (sellTx) {
-        await sleep(1000)
         tokenBalance = Number((await solTokenBalance(token, signer.publicKey))[0])
         tpManager.markupLevel(token, tokenPrice)
       }
