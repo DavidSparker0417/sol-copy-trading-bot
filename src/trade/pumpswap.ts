@@ -3,7 +3,7 @@ import { getCurrentTimestamp, PumpfunBondInfo, sleep, solGrpcStart, solGrpcStop,
 import { TradeSetting } from "../config";
 import { PumpSwapInfo, PumpTokenInfo } from "../types";
 import { reportBought } from "./report";
-import { curAccountList, determineToSell } from "./trade";
+import { curAccountList, curTradingTokens, determineToSell } from "./trade";
 import { TakeProfitManager } from "./tpManager";
 
 export async function tradePumpSwap(
@@ -32,6 +32,7 @@ export async function tradePumpSwap(
     console.log(`[${token}] Failed to buy!`)
     return
   }
+  curTradingTokens.add(token)
   reportBought(token, tokenInfo.triggerSlot, tx)
 
   let tokenBalance = 0
@@ -95,5 +96,6 @@ export async function tradePumpSwap(
     await sleep(100)
   }
 
+  curTradingTokens.delete(token)
   solGrpcStop(token)
 }

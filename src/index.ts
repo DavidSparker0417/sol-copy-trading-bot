@@ -13,6 +13,12 @@ async function main() {
       return
     }
     signatureCache.add(data.signature)
+    
+    if (!config.wallets.includes(data.who)) {
+      console.error(`[${data.what}] Not in config wallets: ${data.who}`)
+      return
+    }
+
     reportDetectionTime(`${data.what}`, data.block, undefined)
     trade(data)
   })

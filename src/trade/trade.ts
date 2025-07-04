@@ -6,6 +6,7 @@ import { tradePumpSwap } from "./pumpswap";
 
 export const gSigner = solWalletImport(process.env.PRIVATE_KEY!)!
 export let curAccountList: any[] = []
+export const curTradingTokens: Set<string> = new Set()
 
 async function accountsListingTask() {
   while (true) {
@@ -38,9 +39,15 @@ export async function trade(trInfo: any) {
 
   const solAmount = trInfo.solAmount / LAMPORTS_PER_SOL
   if (solAmount < config.amountRange[0] || solAmount > config.amountRange[1]) {
-    console.log(`[${trInfo.what}] Price out of range: ${solAmount}`)
+    console.log(`[${trInfo.what}] Sol amount out of range: ${solAmount}`)
     return
   }
+  
+  if (curTradingTokens.has(trInfo.what)) {
+    console.log(`[${trInfo.what}] Already in trading!`)
+    return
+  }
+  
   switch (trInfo.where) {
     case 'PumpFun':
       tradePumpfun(gSigner, trInfo.who, {

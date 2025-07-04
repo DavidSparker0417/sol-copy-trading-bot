@@ -8,7 +8,7 @@
     "tp": 21,
     "sl": 15,
     "slippage": 100,
-    "buyTip": 0.01,
+    "buyTip": 0.001,
     "sellTip": 0.0001,
     "prioFee": 2,
     "timeout": 200,
