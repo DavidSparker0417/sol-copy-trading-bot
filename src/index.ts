@@ -20,7 +20,8 @@ async function main() {
     }
 
     reportDetectionTime(`${data.what}`, data.block, undefined)
-    trade(data)
+    
+    trade(data, config.trade)
   })
 }
 
