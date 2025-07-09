@@ -6,22 +6,22 @@
   "trade": {
     "tradeAmount": 0.02,
     "tp": 21,
-    "sl": 5,
+    "sl": 95,
     "slippage": 100,
     "buyTip": 0.0001,
-    "sellTip": 0.0001,
-    "prioFee": 2,
+    "sellTip": 0,
+    "prioFee": 0.2,
     "timeout": 200,
-    "simulation": true,
+    "simulation": false,
     "sell": {
-      "mode": "tp",
+      "mode": "follow",
       "takeProfits": [
         {
-          "percentage": 5,
+          "percentage": 15,
           "sellPercent": 50
         },
         {
-          "percentage": 10,
+          "percentage": 30,
           "sellPercent": 50
         }
       ]

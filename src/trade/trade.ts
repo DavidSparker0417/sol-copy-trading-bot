@@ -1,12 +1,13 @@
 import { Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { TradeSetting, config } from "../config";
-import { tradePumpfun } from "./pumpfun";
-import { getCurrentTimestamp, Platform, sleep, solGrpcStop, solPFBuy, solPFCalcAmountOut, solPFSell, solPfSwapBuyFast, solPfSwapCalcAmount, solPfSwapFetchPoolId, solPfSwapSell, solTrGrpcWalletStart, solTrSwapInspect, solWalletGetTokenAccounts, solWalletImport } from "dv-sol-lib";
-import { tradePumpSwap } from "./pumpswap";
+import { getCurrentTimestamp, Platform, sleep, solGrpcStop, solPFBuy, solPFCalcAmountOut, solPFSell, solPfSwapBuyFast, solPfSwapCalcAmount, solPfSwapFetchPoolId, solPfSwapSell, solRaydiumLaunchpadBuyFast, solRaydiumLaunchpadSellFast, solTradeCalcAmountOut, solTrGrpcWalletStart, solTrSwapInspect, solWalletGetTokenAccounts, solWalletImport } from "dv-sol-lib";
 import { TakeProfitManager } from "./tpManager";
 import { reportBought } from "./report";
+import { GlobalTradings } from "./monitor";
 
 export const gSigner = solWalletImport(process.env.PRIVATE_KEY!)!
+export const globalTrading = new GlobalTradings(gSigner)
+
 export let curAccountList: any[] = []
 let totalProfit = 0
 let curTradingTokens: Set<string> = new Set()
@@ -20,79 +21,11 @@ async function accountsListingTask() {
   }
 }
 
-export function determineToSell(token: string, passedTm: number, tp: number, tradeSetting: TradeSetting): boolean {
-  if (passedTm > tradeSetting.timeout) {
-    console.log(`[${token}] ********* Timeout! *********`)
-    return true
-  }
-  const sl = 0 - tp
-  if (sl > tradeSetting.sl) {
-    console.log(`[${token}] ********* SL met! *********`)
-    return true
-  }
-  if (tradeSetting.sell.mode === 'tp' && tp > tradeSetting.tp) {
-    console.log(`[${token}] ********* TP met! *********`)
-    return true
-  }
-
-  return false
-}
-
-// export async function trade(trInfo: any) {
-
-//   const solAmount = trInfo.solAmount / LAMPORTS_PER_SOL
-//   if (solAmount < config.amountRange[0] || solAmount > config.amountRange[1]) {
-//     console.log(`[${trInfo.what}] Price out of range: ${solAmount}`)
-//     return
-//   }
-//   switch (trInfo.where) {
-//     case 'PumpFun':
-//       tradePumpfun(gSigner, trInfo.who, {
-//         mint: trInfo.what,
-//         price: trInfo.price,
-//         creator: trInfo.creator,
-//         isPump: true,
-//         triggerSlot: trInfo.block,
-//         info: trInfo.bcInfo,
-//       }, config.trade)
-//       break;
-//     case 'PumpSwap':
-//       tradePumpSwap(gSigner, trInfo.who, {
-//         mint: trInfo.what,
-//         price: trInfo.price,
-//         creator: trInfo.creator,
-//         isPump: true,
-//         triggerSlot: trInfo.block,
-//         info: trInfo.swapInfo,
-//       }, config.trade)
-//       break;
-//     default:
-//       break;
-//   }
-// }
-
-
-async function calcAmountOut(token: string, platform: string, amount: number, isBuy: boolean) {
-  switch (platform) {
-    case 'PumpFun':
-      return await solPFCalcAmountOut(token, amount, isBuy)
-    case 'PumpSwap':
-      const pool = solPfSwapFetchPoolId(token)
-      const outAmount = await solPfSwapCalcAmount(pool, amount, isBuy)
-      if (!isBuy) {
-        return Number(outAmount) / LAMPORTS_PER_SOL
-      }
-      return outAmount
-    default:
-      return 0
-  }
-}
-
 async function buy(
-  signer: Keypair, 
-  token: string, 
-  amount: number, 
-  platform: Platform, 
+  signer: Keypair,
+  token: string,
+  amount: number,
+  platform: Platform,
   trInfo: any,
   tradeSetting: TradeSetting
 ): Promise<number[] | undefined> {
@@ -100,12 +33,12 @@ async function buy(
   switch (platform) {
     case 'PumpFun':
       tx = await solPFBuy(
-        signer, 
-        token, 
-        amount, 
-        tradeSetting.slippage, 
-        tradeSetting.prioFee, 
-        tradeSetting.buyTip, 
+        signer,
+        token,
+        amount,
+        tradeSetting.slippage,
+        tradeSetting.prioFee,
+        tradeSetting.buyTip,
         trInfo.price,
         trInfo.creator,
         0,
@@ -114,15 +47,29 @@ async function buy(
       break;
     case 'PumpSwap':
       tx = await solPfSwapBuyFast(
-        signer, 
-        token, 
-        amount, 
+        signer,
+        token,
+        amount,
         trInfo.swapInfo,
         trInfo.price,
         tradeSetting.slippage,
         tradeSetting.buyTip,
         !curAccountList.includes(token)
       )
+      break;
+    case 'LaunchLab':
+      tx = await solRaydiumLaunchpadBuyFast(
+        signer,
+        token,
+        amount,
+        trInfo.swapInfo,
+        trInfo.price,
+        tradeSetting.slippage,
+        tradeSetting.prioFee,
+        tradeSetting.buyTip,
+        !curAccountList.includes(token)
+      )
+      break;
     default:
       return undefined
   }
@@ -133,40 +80,50 @@ async function buy(
   }
 
   const swapInfo = await solTrSwapInspect(tx, platform)
-  if (!swapInfo) 
+  if (!swapInfo)
     return undefined
 
   reportBought(token, trInfo.block, tx)
-  return [swapInfo.solAmount/LAMPORTS_PER_SOL, swapInfo.tokenAmount, swapInfo.price]
+  return [swapInfo.solAmount / LAMPORTS_PER_SOL, swapInfo.tokenAmount, swapInfo.price]
 }
 
 async function sell(
-  signer: Keypair, 
-  token: string, 
-  amount: BigInt, 
-  platform: Platform, 
+  signer: Keypair,
+  token: string,
+  amount: BigInt,
+  platform: Platform,
   tradeSetting: TradeSetting
 ): Promise<string | undefined> {
   let tx: string | undefined = undefined
   switch (platform) {
     case 'PumpFun':
       tx = await solPFSell(
-        signer, 
-        token, 
-        Number(amount), 
-        tradeSetting.slippage, 
-        tradeSetting.prioFee, 
+        signer,
+        token,
+        Number(amount),
+        tradeSetting.slippage,
+        tradeSetting.prioFee,
         tradeSetting.sellTip
       )
       break;
     case 'PumpSwap':
       tx = await solPfSwapSell(
-        signer, 
-        token, 
-        amount, 
+        signer,
+        token,
+        amount,
         tradeSetting.slippage,
         tradeSetting.sellTip
       )
+    case 'LaunchLab':
+      tx = await solRaydiumLaunchpadSellFast(
+        signer,
+        token,
+        amount,
+        globalTrading.getSwapInfo(token),
+        globalTrading.getPrice(token),
+        tradeSetting.slippage,
+        tradeSetting.sellTip)
+      break;
     default:
       return undefined
   }
@@ -174,54 +131,60 @@ async function sell(
   return tx
 }
 
-export async function trade(trInfo: any, tradeSetting: TradeSetting) {
-
+function decideToBuy(trInfo: any): boolean {
   const token = trInfo.what
   const platform = trInfo.where
 
   if (curTradingTokens.size > 0) {
     console.log(`[${token}] Already trading ${curTradingTokens.size} tokens!`)
-    return
+    return false
   }
 
-  if (platform !== 'PumpFun' && platform !== 'PumpSwap') {
+  if (platform !== 'PumpFun' && platform !== 'PumpSwap' && platform !== 'LaunchLab') {
     console.log(`[${token}] Invalid platform: ${platform}`)
-    return
+    return false
   }
-  
+
   const solAmount = trInfo.solAmount / LAMPORTS_PER_SOL
   if (solAmount < config.amountRange[0] || solAmount > config.amountRange[1]) {
-    console.log(`[${trInfo.what}] Sol amount out of range: ${solAmount}`)
-    return
+    console.log(`[${token}] Sol amount out of range: ${solAmount}`)
+    return false
   }
-  
+
   if (curTradingTokens.has(trInfo.what)) {
-    console.log(`[${trInfo.what}] Already in trading!`)
-    return
+    console.log(`[${token}] Already in trading!`)
+    return false
   }
+  return true
+}
+
+export async function trade(trInfo: any, tradeSetting: TradeSetting) {
+
+  const token = trInfo.what
+  const platform = trInfo.where
   const targetWallet = trInfo.who
 
+  if (!decideToBuy(trInfo))
+    return
   console.log(`[${token}] 🚀 Trade started on ${platform} 🚀`)
   let tokenBalance = 0
   let boughtPrice = 0
   let investAmount = 0
   if (tradeSetting.simulation) {
-    tokenBalance = await calcAmountOut(
+    tokenBalance = await solTradeCalcAmountOut(
       token,
       platform,
       tradeSetting.tradeAmount,
       true
     )
-    boughtPrice = tradeSetting.tradeAmount / (tokenBalance/10**6)
-    if (platform === 'PumpFun')
-      boughtPrice *= 10**3
+    boughtPrice = tradeSetting.tradeAmount / (tokenBalance / 10 ** 6)
     investAmount = tradeSetting.tradeAmount
   } else {
     const buyResult = await buy(
-      gSigner, 
-      token, 
-      tradeSetting.tradeAmount, 
-      platform, 
+      gSigner,
+      token,
+      tradeSetting.tradeAmount,
+      platform,
       trInfo,
       tradeSetting
     )
@@ -230,9 +193,9 @@ export async function trade(trInfo: any, tradeSetting: TradeSetting) {
     investAmount = buyResult[0]
     tokenBalance = buyResult[1]
     boughtPrice = buyResult[2]
-    curTradingTokens.add(token)
   }
 
+  curTradingTokens.add(token)
   let tokenPrice = boughtPrice
   let instantSell: boolean = false
   solTrGrpcWalletStart([token], (data: any) => {
@@ -272,7 +235,7 @@ export async function trade(trInfo: any, tradeSetting: TradeSetting) {
       if (tradeSetting.simulation) {
         tokenBalance -= sellAmount
         tpManager.markupLevel(token, tokenPrice)
-        const soldAmount = (await calcAmountOut(token, platform, sellAmount, false)) / LAMPORTS_PER_SOL
+        const soldAmount = (await solTradeCalcAmountOut(token, platform, sellAmount, false))
         console.log(`[${token}] sold! (price: ${tokenPrice}, amount: ${soldAmount})`)
         returnedAmount += soldAmount
       } else {
@@ -288,7 +251,7 @@ export async function trade(trInfo: any, tradeSetting: TradeSetting) {
           await sleep(1000)
           const tradeInfo = await solTrSwapInspect(sellTx, platform)
           if (tradeInfo) {
-            const soldAmount = tradeInfo.solAmount / LAMPORTS_PER_SOL 
+            const soldAmount = tradeInfo.solAmount / LAMPORTS_PER_SOL
             console.log(`[${token}] sold! (price: ${tokenPrice}, amount: ${soldAmount})`)
             returnedAmount += soldAmount
             tokenBalance -= tradeInfo.tokenAmount
